@@ -14,7 +14,7 @@ async function checkAndSaveReferralCode(refCode) {
         "x-goaffpro-access-token": GOAFFPRO_ACCESS_TOKEN,
         accept: "application/json",
       },
-      params: {
+      params: {  
         ref_code: refCode,
         fields: "ref_code,name,id",
       },

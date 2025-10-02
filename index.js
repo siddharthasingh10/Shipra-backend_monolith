@@ -1,5 +1,3 @@
-// Index.js
-
 const express = require("express");
 const dotenv = require("dotenv");
 const connectDB = require("./config/database");
@@ -17,22 +15,33 @@ const delhiveryRoutes = require("./routes/delhiveryRoutes"); // delhivery routes
 
 dotenv.config();
 const app = express();
+
+// ✅ FIX 1: Add trust proxy setting (MUST be before rate limiting)
+app.set('trust proxy', true);
+
 app.use(express.json());
+app.use(cors()); // ✅ Add CORS middleware
+
 // Rate limiting
-const limiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 100 });
+const limiter = rateLimit({ 
+  windowMs: 15 * 60 * 1000, 
+  max: 100,
+  standardHeaders: true, // ✅ Add these
+  legacyHeaders: false   // ✅ Add these
+});
 app.use(limiter);
+
 // Mount routes
 app.use("/api/auth", authRouter);
 app.use("/api/products", productRoutes);
 app.use("/api/cart", cartRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/wishlist", wishlistRoutes);
-app.use("/api/shopify-customer",shopifyRoutes ); // shopify routes
-app.use("/api/affiliates", goaffproRoutes); // GoAffPro routes
-app.use("/api/delhivery",delhiveryRoutes ); // delhivery routes
+app.use("/api/shopify-customer", shopifyRoutes);
+app.use("/api/affiliates", goaffproRoutes);
+app.use("/api/delhivery", delhiveryRoutes);
 
-
-//Checking is API live
+// Checking is API live
 app.get("/", (req, res) => {
   res.send("API is running…");
 });
@@ -48,5 +57,4 @@ connectDB();
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () =>
   console.log(`Server running in ${process.env.NODE_ENV} on port ${PORT}`)
-
 );

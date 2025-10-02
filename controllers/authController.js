@@ -9,13 +9,27 @@ const OTP_EXPIRY_MIN = parseInt(process.env.OTP_EXPIRY_MIN || "5", 10);
 // in-memory OTP store
 const otpStore = new Map();
 
-// transporter
+// ✅ FIX 2: Improved email transporter with better configuration
 const transporter = nodemailer.createTransport({
-  service: "gmail",
+  host: process.env.SMTP_HOST || "smtp.gmail.com",
+  port: process.env.SMTP_PORT || 587,
+  secure: false,
   auth: {
     user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
+    pass: process.env.EMAIL_PASS, // Use App Password for Gmail
   },
+  connectionTimeout: 30000, // 30 seconds
+  greetingTimeout: 30000,
+  socketTimeout: 30000,
+});
+
+// ✅ Test email connection on startup
+transporter.verify(function (error, success) {
+  if (error) {
+    console.log('❌ SMTP connection error:', error);
+  } else {
+    console.log('✅ SMTP server is ready to take our messages');
+  }
 });
 
 // helper: generate 6-digit OTP
@@ -34,13 +48,17 @@ const sendOtp = async (req, res) => {
 
     otpStore.set(email, { code: otp, expiresAt });
 
+    console.log(`📧 Attempting to send OTP to: ${email}`);
+
     await transporter.sendMail({
       from: process.env.EMAIL_USER,
       to: email,
       subject: "Your OTP Code",
       text: `Your OTP is ${otp}. It expires in ${OTP_EXPIRY_MIN} minute(s).`,
+      html: `<p>Your OTP is <strong>${otp}</strong>. It expires in ${OTP_EXPIRY_MIN} minute(s).</p>`,
     });
 
+    console.log(`✅ OTP sent successfully to: ${email}`);
     return res.json({ message: "OTP sent to email" });
   } catch (err) {
     console.error("❌ Error in sendOtp:", err);
