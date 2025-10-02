@@ -17,7 +17,7 @@ dotenv.config();
 const app = express();
 
 // ✅ FIX 1: Add trust proxy setting (MUST be before rate limiting)
-app.set('trust proxy', true);
+app.set('trust proxy', 1);
 
 app.use(express.json());
 app.use(cors()); // ✅ Add CORS middleware
