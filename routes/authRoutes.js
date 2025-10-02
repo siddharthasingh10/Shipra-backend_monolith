@@ -1,19 +1,8 @@
-// ecommerce-backend/routes/authRoutes.js
-
-const express = require("express");
+const express = require('express');
 const router = express.Router();
-const {
-  registerUser,
-  loginUser,
-  logoutUser,
-} = require("../controllers/authController");
-const { protect } = require("../middlewares/authMiddleware");
+const {sendOtp,verifyOtp} = require('../controllers/authController');
 
-// /api/auth/register
-router.post("/register", registerUser);
-
-// /api/auth/login
-router.post("/login", loginUser);
-router.post("/logout", protect, logoutUser);
+router.post('/send-otp', sendOtp);
+router.post('/verify-otp', verifyOtp);
 
 module.exports = router;
