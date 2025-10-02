@@ -10,18 +10,29 @@ const OTP_EXPIRY_MIN = parseInt(process.env.OTP_EXPIRY_MIN || "5", 10);
 const otpStore = new Map();
 
 // ✅ FIX 2: Improved email transporter with better configuration
+// const transporter = nodemailer.createTransport({
+//   host: process.env.SMTP_HOST || "smtp.gmail.com",
+//   port: process.env.SMTP_PORT || 587,
+//   secure: false,
+//   auth: {
+//     user: process.env.EMAIL_USER,
+//     pass: process.env.EMAIL_PASS, // Use App Password for Gmail
+//   },
+//   connectionTimeout: 30000, // 30 seconds
+//   greetingTimeout: 30000,
+//   socketTimeout: 30000,
+// });
+
 const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST || "smtp.gmail.com",
-  port: process.env.SMTP_PORT || 587,
-  secure: false,
+  host: "smtp.resend.com",
+  port: 587,
+  secure: false, // TLS upgrade
   auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS, // Use App Password for Gmail
+    user: "resend", // fixed, always "resend"
+    pass: process.env.RESEND_API_KEY,
   },
-  connectionTimeout: 30000, // 30 seconds
-  greetingTimeout: 30000,
-  socketTimeout: 30000,
 });
+
 
 // ✅ Test email connection on startup
 transporter.verify(function (error, success) {
