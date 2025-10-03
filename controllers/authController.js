@@ -1,47 +1,16 @@
-require("dotenv").config();
-const nodemailer = require("nodemailer");
+
+const { Resend } = require("resend");
 const jwt = require("jsonwebtoken");
 const User = require("../models/userModel");
 const { createCustomer, getCustomerByEmail } = require("../utils/shopifyApi");
 
 const OTP_EXPIRY_MIN = parseInt(process.env.OTP_EXPIRY_MIN || "5", 10);
 
+// Initialize Resend
+const resend = new Resend(process.env.RESEND_API_KEY);
+
 // in-memory OTP store
 const otpStore = new Map();
-
-// ✅ FIX 2: Improved email transporter with better configuration
-// const transporter = nodemailer.createTransport({
-//   host: process.env.SMTP_HOST || "smtp.gmail.com",
-//   port: process.env.SMTP_PORT || 587,
-//   secure: false,
-//   auth: {
-//     user: process.env.EMAIL_USER,
-//     pass: process.env.EMAIL_PASS, // Use App Password for Gmail
-//   },
-//   connectionTimeout: 30000, // 30 seconds
-//   greetingTimeout: 30000,
-//   socketTimeout: 30000,
-// });
-
-const transporter = nodemailer.createTransport({
-  host: "smtp.resend.com",
-  port: 587,
-  secure: false, // TLS upgrade
-  auth: {
-    user: "resend", // fixed, always "resend"
-    pass: process.env.RESEND_API_KEY,
-  },
-});
-
-
-// ✅ Test email connection on startup
-transporter.verify(function (error, success) {
-  if (error) {
-    console.log('❌ SMTP connection error:', error);
-  } else {
-    console.log('✅ SMTP server is ready to take our messages');
-  }
-});
 
 // helper: generate 6-digit OTP
 function generateOtp() {
@@ -52,6 +21,7 @@ function generateOtp() {
 const sendOtp = async (req, res) => {
   try {
     const { email } = req.body;
+    console.log(`📧 Received OTP request for: ${email}`);
     if (!email) return res.status(400).json({ error: "Email is required" });
 
     const otp = generateOtp();
@@ -61,21 +31,34 @@ const sendOtp = async (req, res) => {
 
     console.log(`📧 Attempting to send OTP to: ${email}`);
 
-    await transporter.sendMail({
-      from: process.env.EMAIL_USER,
+    // Send email using Resend with your verified domain
+    const { data, error } = await resend.emails.send({
+      from: 'Shipra App <hello@shipra.app>',
       to: email,
-      subject: "Your OTP Code",
-      text: `Your OTP is ${otp}. It expires in ${OTP_EXPIRY_MIN} minute(s).`,
-      html: `<p>Your OTP is <strong>${otp}</strong>. It expires in ${OTP_EXPIRY_MIN} minute(s).</p>`,
+      subject: "Your OTP Code - Shipra App",
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2>Your Shipra App Verification Code</h2>
+          <p>Use the following code to verify your email:</p>
+          <div style="background: #f4f4f4; padding: 15px; text-align: center; font-size: 24px; letter-spacing: 5px; font-weight: bold; margin: 20px 0;">
+            ${otp}
+          </div>
+          <p>This code will expire in ${OTP_EXPIRY_MIN} minutes.</p>
+          <p>If you didn't request this code, please ignore this email.</p>
+        </div>
+      `,
     });
+
+    if (error) {
+      console.error('❌ Resend error:', error);
+      return res.status(500).json({ error: "Error sending OTP", details: error.message });
+    }
 
     console.log(`✅ OTP sent successfully to: ${email}`);
     return res.json({ message: "OTP sent to email" });
   } catch (err) {
     console.error("❌ Error in sendOtp:", err);
-    return res
-      .status(500)
-      .json({ error: "Error sending OTP", details: err.message });
+    return res.status(500).json({ error: "Error sending OTP", details: err.message });
   }
 };
 
@@ -178,3 +161,4 @@ module.exports = {
   sendOtp,
   verifyOtp,
 };
+
